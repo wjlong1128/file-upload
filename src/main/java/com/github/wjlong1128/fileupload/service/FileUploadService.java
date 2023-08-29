@@ -16,4 +16,7 @@ public interface FileUploadService {
     DownloadBO downLoad(String fileName);
 
     DownloadBO downLoad(String bucket,String filePath) throws FileServerException;
+
+    boolean deleteFile(String id);
+
 }

@@ -23,6 +23,7 @@ import java.net.URLEncoder;
  */
 @RequestMapping("simple")
 @Controller
+@CrossOrigin
 public class SimpleFileUploadController {
 
     @Resource
@@ -48,5 +49,10 @@ public class SimpleFileUploadController {
                 .body(downloadBO.getContent());
     }
 
+    @PostMapping(value = "{id}")
+    public RestResp deleteFile(@PathVariable String id)  {
+        boolean success = this.fileUploadService.deleteFile(id);
+        return success ? RestResp.success("删除成功") : RestResp.fail("删除失败");
+    }
 
 }

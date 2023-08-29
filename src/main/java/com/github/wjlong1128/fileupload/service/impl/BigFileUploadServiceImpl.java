@@ -127,8 +127,16 @@ public class BigFileUploadServiceImpl implements BigFileUploadService {
                 record.setPath(filePathName);
                 record.setOriginalName(originalName);
                 record.setContentType(MimeTypeUtils.getMimeWithSuffix(originalName));
-                record.setMimeType(MediaType.APPLICATION_OCTET_STREAM_VALUE);
-                this.fileRecordService.save(record);
+                try {
+                    byte[] bytes = this.fileServer.getObject(finalMergeBucket, filePathName);
+                    record.setMimeType(MimeTypeUtils.getMimeWithMagic(bytes));
+                    record.setSize((bytes.length / 1024 / 1024) + "MB");
+                    bytes = null;
+                    System.gc();
+                    this.fileRecordService.save(record);
+                } catch (Exception e) {
+                    log.error("合并文件{}入库失败",md5,e);
+                }
                 log.debug("文件合并入库:{}", md5);
             });
             // 异步删除残留

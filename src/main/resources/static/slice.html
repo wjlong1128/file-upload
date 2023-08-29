@@ -16,8 +16,10 @@
 <script src="js/spark-md5.min.js"></script>
 <script src="js/request.js"></script>
 <script type="text/javascript" defer>
-
-
+    const message  = localStorage.getItem('file-upload-server')
+    if (message){
+        console.log(message);
+    }
     const http = 'http://localhost:8888/file/big/'
 
     let progress = 0;
@@ -70,7 +72,17 @@
         if (uploadFails.length <= 0) {
             // 上传成功，发送合并文件请求
             const data = await get(http + 'merge', {md5, chunkNum: chunks.length, fileName: file.name});
-            console.log(data)
+            localStorage.setItem('file-upload-server',JSON.stringify(data))
+            // if(confirm('上传成功，是否删除该文件')){
+            //    const r = await post(`http://localhost:8888/file/simple/${md5}`);
+            //    if (confirm(`${r} 是否刷新页面`)){
+            //        location.reload();
+            //    }
+            // }else {
+            //     if (confirm(`是否刷新页面`)){
+            //         location.reload();
+            //     }
+            // }
         }
     }
 

@@ -31,15 +31,14 @@ public class FileUploadServiceImpl implements FileUploadService {
     private FileRecordService fileRecordService;
 
 
-
     @Override
-    public String upload( String originalName, String contentType, byte[] bytes) {
+    public String upload(String originalName, String contentType, byte[] bytes) {
         try {
             String md5 = DigestUtils.md5DigestAsHex(bytes);
             String mimeType = MimeTypeUtils.getMimeWithMagic(bytes);
             String suffix = originalName.substring(originalName.lastIndexOf('.'));
             String fileName = getFilePathWithMD5(md5, suffix);
-            String bucket =fileServer.getBucket(originalName);
+            String bucket = fileServer.getBucket(originalName);
             FileBO bo = fileServer.uploadObject(bucket, fileName, mimeType, bytes);
             // 入库
             FileRecord record = new FileRecord();
@@ -79,7 +78,7 @@ public class FileUploadServiceImpl implements FileUploadService {
                     )
                     .eq(FileRecord::getFileName, fileName)
                     .one();
-            if (record == null){
+            if (record == null) {
                 throw new RuntimeException("文件不存在");
             }
             byte[] bytes = fileServer.getObject(record.getBucket(), record.getPath());
@@ -104,7 +103,7 @@ public class FileUploadServiceImpl implements FileUploadService {
                         FileRecord::getFileName
                 )
                 .eq(FileRecord::getPath, filePath)
-                .eq(FileRecord::getBucket,bucket)
+                .eq(FileRecord::getBucket, bucket)
                 .one();
         byte[] bytes = fileServer.getObject(bucket, filePath);
         return DownloadBO.builder()
@@ -115,9 +114,24 @@ public class FileUploadServiceImpl implements FileUploadService {
                 .build();
     }
 
+    @Override
+    public boolean deleteFile(String id) {
+        FileRecord record = this.fileRecordService.getById(id);
+        if (record == null) {
+            return false;
+        }
+        try {
+            this.fileServer.deleteObject(record.getBucket(), record.getPath());
+        } catch (FileServerException e) {
+            throw new RuntimeException("文件删除失败", e);
+        }
+        this.fileRecordService.removeById(record);
+        return true;
+    }
+
     private String uuidFileName(String fileName) {
         String suffix = fileName.substring(fileName.lastIndexOf('.'));
-        return UUID.randomUUID().toString().replace('-','_') + suffix;
+        return UUID.randomUUID().toString().replace('-', '_') + suffix;
     }
 
 

@@ -9,6 +9,7 @@ import org.springframework.web.multipart.MultipartFile;
  * @desc
  */
 public interface BigFileUploadService {
+
     boolean isExistsFile(String md5);
 
     boolean isExistsChunk(String md5, Integer chunkNo);
@@ -16,4 +17,5 @@ public interface BigFileUploadService {
     boolean uploadChunk(String md5, Integer chunkNo, MultipartFile file);
 
     void mergeChunk(String fileName, String md5, Integer chunkNum);
+
 }
