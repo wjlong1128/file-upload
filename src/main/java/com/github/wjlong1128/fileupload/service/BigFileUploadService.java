@@ -1,5 +1,6 @@
 package com.github.wjlong1128.fileupload.service;
 
+import com.github.wjlong1128.fileupload.domain.vo.FileVO;
 import org.springframework.web.multipart.MultipartFile;
 
 /**
@@ -16,6 +17,6 @@ public interface BigFileUploadService {
 
     boolean uploadChunk(String md5, Integer chunkNo, MultipartFile file);
 
-    void mergeChunk(String fileName, String md5, Integer chunkNum);
+    FileVO mergeChunk(String fileName, String md5, Integer chunkNum);
 
 }

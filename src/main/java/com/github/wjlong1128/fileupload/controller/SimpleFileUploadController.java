@@ -1,7 +1,8 @@
 package com.github.wjlong1128.fileupload.controller;
 
 import com.github.wjlong1128.fileupload.domain.bo.DownloadBO;
-import com.github.wjlong1128.fileupload.domain.result.RestResp;
+import com.github.wjlong1128.fileupload.domain.result.Result;
+import com.github.wjlong1128.fileupload.domain.vo.FileVO;
 import com.github.wjlong1128.fileupload.service.FileUploadService;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -31,11 +32,10 @@ public class SimpleFileUploadController {
 
     @ResponseBody
     @PostMapping("upload")
-    public RestResp upload(@RequestPart("file") MultipartFile file) throws IOException {
-        Object result = this.fileUploadService.upload(file.getOriginalFilename(), file.getContentType(), file.getBytes());
-        return RestResp.success("上传成功").data(result);
+    public Result<FileVO> upload(@RequestPart("file") MultipartFile file) throws IOException {
+        FileVO result = this.fileUploadService.upload(file.getOriginalFilename(), file.getContentType(), file.getBytes());
+        return Result.success("上传成功", result);
     }
-
 
     @GetMapping(value = "{fileName}")
     public ResponseEntity<byte[]> downLoad(@PathVariable String fileName) throws UnsupportedEncodingException {
@@ -50,9 +50,9 @@ public class SimpleFileUploadController {
     }
 
     @PostMapping(value = "{id}")
-    public RestResp deleteFile(@PathVariable String id)  {
+    public Result deleteFile(@PathVariable String id) {
         boolean success = this.fileUploadService.deleteFile(id);
-        return success ? RestResp.success("删除成功") : RestResp.fail("删除失败");
+        return success ? Result.success("删除成功") : Result.fail("删除失败");
     }
 
 }

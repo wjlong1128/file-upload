@@ -1,13 +1,14 @@
 package com.github.wjlong1128.fileupload.controller;
 
-import com.github.wjlong1128.fileupload.domain.result.RestResp;
+import com.github.wjlong1128.fileupload.domain.result.Result;
+import com.github.wjlong1128.fileupload.domain.vo.ChunkVO;
+import com.github.wjlong1128.fileupload.domain.vo.FileVO;
+import com.github.wjlong1128.fileupload.domain.vo.UploadChunkVO;
 import com.github.wjlong1128.fileupload.service.BigFileUploadService;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import javax.annotation.Resource;
-import java.io.IOException;
-import java.util.HashMap;
 
 /**
  * @author wjlong1128
@@ -24,39 +25,36 @@ public class BigFileUploadController {
     private BigFileUploadService bigFileUploadService;
 
     @GetMapping("{md5}")
-    public RestResp isExists(@PathVariable("md5") String hex) {
-        boolean isExists = this.bigFileUploadService.isExistsFile(hex);
-        return RestResp.success().data(isExists);
+    public Result<Boolean> isExists(@PathVariable("md5") String md5) {
+        boolean isExists = this.bigFileUploadService.isExistsFile(md5);
+        return Result.success(isExists);
     }
 
 
     @GetMapping("chunk/{md5}/{chunkNo}")
-    public RestResp isExists(@PathVariable("md5") String hex, @PathVariable("chunkNo") Integer chunkNo) {
-        boolean isExists = this.bigFileUploadService.isExistsChunk(hex, chunkNo);
-        HashMap<Object, Object> data = new HashMap<>();
-        data.put("chunkNo", chunkNo);
-        data.put("isExists", isExists);
-        return RestResp.success().data(data);
+    public Result<ChunkVO> isExists(@PathVariable("md5") String md5, @PathVariable("chunkNo") Integer chunkNo) {
+        boolean isExists = this.bigFileUploadService.isExistsChunk(md5, chunkNo);
+        return Result.success(new ChunkVO(chunkNo, isExists));
     }
 
 
     @PostMapping("upload")
-    public RestResp testUpload(
+    public Result<UploadChunkVO> uploadChunk(
             @RequestParam("file") MultipartFile file,
             @RequestParam("md5") String md5,
             @RequestParam("chunkNo") Integer chunkNo
-    ) throws IOException {
+    ) {
         boolean success = this.bigFileUploadService.uploadChunk(md5, chunkNo, file);
-        HashMap<String, Object> data = new HashMap<>();
-        data.put("chunkNo", chunkNo);
-        data.put("success", success);
-        return RestResp.success().data(data);
+        UploadChunkVO uploadChunkVO = new UploadChunkVO();
+        uploadChunkVO.setSuccess(success);
+        uploadChunkVO.setChunkNo(chunkNo);
+        return Result.success(uploadChunkVO);
     }
 
 
     @GetMapping("merge")
-    public RestResp mergeChunk(String fileName, String md5, Integer chunkNum) {
-        bigFileUploadService.mergeChunk(fileName, md5, chunkNum);
-        return RestResp.success().data("上传成功");
+    public Result<FileVO> mergeChunk(String fileName, String md5, Integer chunkNum) {
+        FileVO fileVO = bigFileUploadService.mergeChunk(fileName, md5, chunkNum);
+        return Result.success("文件上传完成！", fileVO);
     }
 }

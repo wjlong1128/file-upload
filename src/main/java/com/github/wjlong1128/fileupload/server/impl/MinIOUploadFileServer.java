@@ -1,9 +1,9 @@
 package com.github.wjlong1128.fileupload.server.impl;
 
+import com.github.wjlong1128.fileupload.config.minio.properties.MinioProperties;
 import com.github.wjlong1128.fileupload.domain.bo.ChunkFileBO;
 import com.github.wjlong1128.fileupload.domain.bo.FileBO;
 import com.github.wjlong1128.fileupload.domain.exception.FileServerException;
-import com.github.wjlong1128.fileupload.config.minio.properties.MinioProperties;
 import com.github.wjlong1128.fileupload.server.AbstractFileServer;
 import com.github.wjlong1128.fileupload.server.ShardUploadFileServer;
 import io.minio.*;
@@ -61,6 +61,8 @@ public class MinIOUploadFileServer extends AbstractFileServer implements ShardUp
             bo.setSize(size);
             bo.setServerType(SERVER_TYPE);
             return bo;
+        } catch (IOException e) {
+            throw new FileServerException("读取文件字节失败", e);
         } catch (Exception e) {
             throw new FileServerException("上传文件失败", e);
         }
@@ -91,7 +93,7 @@ public class MinIOUploadFileServer extends AbstractFileServer implements ShardUp
                     .build());
             return true;
         } catch (Exception e) {
-            throw new FileServerException("删除文件失败", e);
+            throw new FileServerException("删除文件失败 bucket: " + bucket + ", filePath: " + filePath, e);
         }
     }
 
@@ -129,7 +131,7 @@ public class MinIOUploadFileServer extends AbstractFileServer implements ShardUp
                     .object(objectName)
                     .build());
         } catch (Exception e) {
-            throw new FileServerException("合并文件失败", e);
+            throw new FileServerException("合并分块文件失败", e);
         }
     }
 
@@ -145,7 +147,7 @@ public class MinIOUploadFileServer extends AbstractFileServer implements ShardUp
                             .objects(objects)
                             .build());
             for (Result<DeleteError> result : results) {
-                log.info("remove file: " + result.get());
+                log.debug("remove file: " + result.get());
             }
         } catch (Exception e) {
             throw new FileServerException("批量删除文件异常", e);
@@ -189,22 +191,10 @@ public class MinIOUploadFileServer extends AbstractFileServer implements ShardUp
                 this.createBucket(bucketName);
             }
         } catch (Exception e) {
-            throw new FileServerException("创建buckets失败", e);
+            throw new FileServerException("创建bucket"+bucketName+"失败", e);
         }
 
     }
-
-   /* public void setBucketAccessPolicy(String bucket, MinioProperties.AccessPolicy accessPolicy) throws FileServerException {
-        try {
-            SetBucketPolicyArgs args = SetBucketPolicyArgs.builder()
-                    .bucket(bucket)
-                    .config(accessPolicy.getPolicy())
-                    .build();
-            this.minioClient.setBucketPolicy(args);
-        } catch (Exception e) {
-            throw new FileServerException("更改bucket访问权限失败", e);
-        }
-    }*/
 
 
 }

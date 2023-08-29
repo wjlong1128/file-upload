@@ -30,7 +30,6 @@ public class MyBatisPlusConfig {
         MybatisPlusInterceptor interceptor = new MybatisPlusInterceptor();
         // 分页插件
         PaginationInnerInterceptor innerInterceptor = new PaginationInnerInterceptor(DbType.MYSQL);
-
         interceptor.addInnerInterceptor(innerInterceptor);
         return interceptor;
     }

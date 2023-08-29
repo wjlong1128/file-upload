@@ -2,6 +2,7 @@ package com.github.wjlong1128.fileupload.service;
 
 import com.github.wjlong1128.fileupload.domain.bo.DownloadBO;
 import com.github.wjlong1128.fileupload.domain.exception.FileServerException;
+import com.github.wjlong1128.fileupload.domain.vo.FileVO;
 
 /**
  * @author wjlong1128
@@ -11,7 +12,7 @@ import com.github.wjlong1128.fileupload.domain.exception.FileServerException;
  */
 public interface FileUploadService {
 
-    String upload(String originalName, String contentType, byte[] bytes);
+    FileVO upload(String originalName, String contentType, byte[] bytes);
 
     DownloadBO downLoad(String fileName);
 

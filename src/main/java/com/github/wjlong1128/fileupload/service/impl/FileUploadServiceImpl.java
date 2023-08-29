@@ -1,9 +1,13 @@
 package com.github.wjlong1128.fileupload.service.impl;
 
+import cn.hutool.core.bean.BeanUtil;
 import com.github.wjlong1128.fileupload.domain.bo.DownloadBO;
 import com.github.wjlong1128.fileupload.domain.bo.FileBO;
 import com.github.wjlong1128.fileupload.domain.entity.FileRecord;
+import com.github.wjlong1128.fileupload.domain.exception.BusinessException;
 import com.github.wjlong1128.fileupload.domain.exception.FileServerException;
+import com.github.wjlong1128.fileupload.domain.result.UploadMessage;
+import com.github.wjlong1128.fileupload.domain.vo.FileVO;
 import com.github.wjlong1128.fileupload.server.FileServer;
 import com.github.wjlong1128.fileupload.service.FileRecordService;
 import com.github.wjlong1128.fileupload.service.FileUploadService;
@@ -32,31 +36,38 @@ public class FileUploadServiceImpl implements FileUploadService {
 
 
     @Override
-    public String upload(String originalName, String contentType, byte[] bytes) {
+    public FileVO upload(String originalName, String contentType, byte[] bytes) {
+
+        String md5 = DigestUtils.md5DigestAsHex(bytes);
+        String mimeType = MimeTypeUtils.getMimeWithMagic(bytes);
+        String suffix = originalName.substring(originalName.lastIndexOf('.'));
+        String fileName = getFilePathWithMD5(md5, suffix);
+        String bucket = null;
         try {
-            String md5 = DigestUtils.md5DigestAsHex(bytes);
-            String mimeType = MimeTypeUtils.getMimeWithMagic(bytes);
-            String suffix = originalName.substring(originalName.lastIndexOf('.'));
-            String fileName = getFilePathWithMD5(md5, suffix);
-            String bucket = fileServer.getBucket(originalName);
-            FileBO bo = fileServer.uploadObject(bucket, fileName, mimeType, bytes);
-            // 入库
-            FileRecord record = new FileRecord();
-            record.setId(md5);
-            record.setFileName(md5 + suffix);
-            record.setMimeType(mimeType);
-            record.setContentType(contentType);
-            record.setSize((bo.getSize() / 1024) + "KB");
-            record.setBucket(bo.getBucket());
-            record.setPath(bo.getPath());
-            record.setUrl(bo.getUrl());
-            record.setOriginalName(originalName);
-            record.setStorageType(bo.getServerType());
-            this.fileRecordService.saveOrUpdate(record);
-            return bo.getUrl();
-        } catch (Exception e) {
-            throw new RuntimeException("文件上传失败", e);
+            bucket = fileServer.getBucket(originalName);
+        } catch (FileServerException e) {
+            throw new BusinessException(UploadMessage.Normal.UNABLE_GET_BUCKET, e);
         }
+        FileBO bo = null;
+        try {
+            bo = fileServer.uploadObject(bucket, fileName, mimeType, bytes);
+        } catch (FileServerException e) {
+            throw new BusinessException(UploadMessage.Normal.UNABLE_UPLOAD_FILE, e);
+        }
+        // 入库
+        FileRecord record = new FileRecord();
+        record.setId(md5);
+        record.setFileName(md5 + suffix);
+        record.setMimeType(mimeType);
+        record.setContentType(contentType);
+        record.setSize((bo.getSize() / 1024) + "KB");
+        record.setBucket(bo.getBucket());
+        record.setPath(bo.getPath());
+        record.setUrl(bo.getUrl());
+        record.setOriginalName(originalName);
+        record.setStorageType(bo.getServerType());
+        this.fileRecordService.saveOrUpdate(record);
+        return BeanUtil.copyProperties(record, FileVO.class);
     }
 
     @NotNull
@@ -79,7 +90,7 @@ public class FileUploadServiceImpl implements FileUploadService {
                     .eq(FileRecord::getFileName, fileName)
                     .one();
             if (record == null) {
-                throw new RuntimeException("文件不存在");
+                throw new BusinessException(UploadMessage.Normal.FILE_NOT_EXISTS);
             }
             byte[] bytes = fileServer.getObject(record.getBucket(), record.getPath());
             return DownloadBO.builder()
@@ -89,7 +100,7 @@ public class FileUploadServiceImpl implements FileUploadService {
                     .contextType(record.getContentType())
                     .build();
         } catch (FileServerException e) {
-            throw new RuntimeException("文件下载失败", e);
+            throw new BusinessException(UploadMessage.Normal.UNABLE_GET_FILE, e);
         }
     }
 
@@ -123,7 +134,7 @@ public class FileUploadServiceImpl implements FileUploadService {
         try {
             this.fileServer.deleteObject(record.getBucket(), record.getPath());
         } catch (FileServerException e) {
-            throw new RuntimeException("文件删除失败", e);
+            throw new BusinessException(UploadMessage.Normal.FILE_DELETE_FAIL, e);
         }
         this.fileRecordService.removeById(record);
         return true;
