@@ -1,0 +1,53 @@
+server:
+  port: 8888
+  servlet:
+    context-path: /file
+
+spring:
+  application:
+    name: file-upload-service
+  servlet:
+    multipart:
+      max-file-size: 100MB
+      max-request-size: 100MB
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    username: root
+    password: root
+    url: jdbc:mysql:///wjl_file
+minio:
+  endpoint-url: http://localhost:9000
+  access-key: admin
+  secret-key: 12345678
+file-server:
+  bucket:
+    auto-create-buckets: true
+    default-type-buckets:
+      - name: images
+        store-types:
+          - image/apng
+          - image/avif
+          - image/gif
+          - image/jpeg
+          - image/png
+          - image/svg+xml
+          - image/webp
+      - name: videos
+        store-types:
+          - application/octet-stream
+          - video/webm
+          - video/ogg
+          - video/mp4
+          - video/x-msvideo
+          - video/x-matroska
+          - video/x-flv
+          - video/x-ms-wmv
+          - video/quicktime
+    unknown-bucket: unknown
+
+
+
+mybatis-plus:
+  configuration:
+    map-underscore-to-camel-case: true
+

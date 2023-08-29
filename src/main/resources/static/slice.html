@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+          content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>分片文件</title>
+</head>
+<body>
+
+<form action="https://localhost:8888/file/big/chunk" method="post">
+    <input type="file" class="upload-file">
+</form>
+
+<script src="js/spark-md5.min.js"></script>
+<script src="js/request.js"></script>
+<script type="text/javascript" defer>
+
+
+    const http = 'http://localhost:8888/file/big/'
+
+    let progress = 0;
+    const input = document.querySelector('.upload-file');
+    input.onchange = async e => {
+        const file = input.files[0];
+        if (!file) {
+            return;
+        }
+
+        // 创建分块
+        const chunks = createChunks(file, CHUNK_SIZE);
+        console.log('分割为', chunks.length)
+        // 计算md5
+        const md5 = await hash(chunks);
+        // 1. 首先判断该文件是否在服务器中存在
+        const isExists = await get(http + md5)
+        if (isExists) {
+            console.log('文件已经存在，无需上传')
+            return;
+        }
+        const checks = []
+        for (let i = 0; i < chunks.length; i++) {
+            // value 返回值为 {chunkNo:0, isExists: false}
+            checks.push(get(http + `chunk/${md5}/${i}`))
+        }
+
+
+        const chunksExists = await Promise.all(checks);
+        const uploads = chunksExists.filter((value) => {
+            return !value.isExists
+        }).map((value) => {
+            // 这里证明分块没有上传，包装为上传的promise
+            console.log('要等待上传的文件', value, chunks[value.chunkNo])
+            const formData = new FormData();
+            formData.append('file', chunks[value.chunkNo]);
+            formData.append('md5', md5);
+            formData.append('chunkNo', value.chunkNo);
+            console.log(formData)
+            // 返回值 {}
+            return upload(http + 'upload', formData)
+        })
+
+        const results = await Promise.all(uploads);
+        const uploadFails = results.filter(value => {
+            return !value.success
+        })
+
+        console.log('上传失败的文件', uploadFails)
+        if (uploadFails.length <= 0) {
+            // 上传成功，发送合并文件请求
+            const data = await get(http + 'merge', {md5, chunkNum: chunks.length, fileName: file.name});
+            console.log(data)
+        }
+    }
+
+
+    // 6MB
+    const CHUNK_SIZE = 1024 * 1024 * 6;
+
+    // 返回分块文件数组
+    const createChunks = (file, chunkSize) => {
+        const result = [];
+        for (let i = 0; i < file.size; i += chunkSize) {
+            const chunk = file.slice(i, i + chunkSize);
+            result.push(chunk);
+        }
+        return result;
+    }
+
+    const hash = (chunks) => {
+        return new Promise(resolve => {
+            const spark = new SparkMD5.ArrayBuffer();
+
+            function _readChunk(index) {
+                // 读取完成
+                if (index >= chunks.length) {
+                    resolve(spark.end())
+                    return;
+                }
+                const chunk = chunks[index];
+                const reader = new FileReader();
+                reader.onload = e => {
+                    spark.append(e.target.result)
+                    _readChunk(index + 1);
+                }
+                reader.readAsArrayBuffer(chunk);
+            }
+
+            _readChunk(0)
+        })
+    }
+
+
+</script>
+</body>
+</html>
