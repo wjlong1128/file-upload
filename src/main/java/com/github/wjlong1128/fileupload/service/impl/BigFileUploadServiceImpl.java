@@ -1,11 +1,14 @@
 package com.github.wjlong1128.fileupload.service.impl;
 
 import com.github.wjlong1128.fileupload.domain.bo.ChunkFileBO;
+import com.github.wjlong1128.fileupload.domain.dto.ChunkCheckDTO;
 import com.github.wjlong1128.fileupload.domain.entity.FileRecord;
 import com.github.wjlong1128.fileupload.domain.exception.FileServerException;
 import com.github.wjlong1128.fileupload.server.ShardUploadFileServer;
 import com.github.wjlong1128.fileupload.service.BigFileUploadService;
 import com.github.wjlong1128.fileupload.service.FileRecordService;
+import com.github.wjlong1128.fileupload.task.delay.ChunkCheckDelay;
+import com.github.wjlong1128.fileupload.task.delay.ChunkCheckDelayTaskExcutor;
 import com.github.wjlong1128.fileupload.utils.FileUtils;
 import com.github.wjlong1128.fileupload.utils.MimeTypeUtils;
 import lombok.extern.slf4j.Slf4j;
@@ -17,6 +20,7 @@ import org.springframework.web.multipart.MultipartFile;
 import javax.annotation.Resource;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -47,6 +51,9 @@ public class BigFileUploadServiceImpl implements BigFileUploadService {
     @Resource
     private ExecutorService executorService;
 
+    @Resource
+    private ChunkCheckDelayTaskExcutor chunkCheckDelayTaskExcutor;
+
     @Override
     public boolean isExistsFile(String hex) {
         FileRecord record = this.fileRecordService.lambdaQuery()
@@ -71,9 +78,12 @@ public class BigFileUploadServiceImpl implements BigFileUploadService {
         try {
             String type = MediaType.APPLICATION_OCTET_STREAM_VALUE;
             String bucket = this.fileServer.getBucket(type);
-            this.fileServer.uploadObject(bucket, generatChunkFilePath(hex, chunkNo), type, file.getBytes());
+            String filePath = generatChunkFilePath(hex, chunkNo);
+            this.fileServer.uploadObject(bucket, filePath, type, file.getBytes());
             String key = CACHE_PREFIX + hex;
             this.stringRedisTemplate.opsForSet().add(key, chunkNo.toString());
+            // 提交延迟任务，如果过期就删除
+            this.chunkCheckDelayTaskExcutor.add(new ChunkCheckDelay(new ChunkCheckDTO(key, chunkNo, bucket, filePath), 1, TimeUnit.DAYS));
             return true;
         } catch (Exception e) {
             throw new RuntimeException("分块文件上传失败", e);
@@ -101,14 +111,14 @@ public class BigFileUploadServiceImpl implements BigFileUploadService {
                     .map(i -> new ChunkFileBO(finalChunkBucket, generatChunkFilePath(md5, i)))
                     .collect(Collectors.toList());
             // 获取后缀 .jpg
-            String suffix = FileUtils.getSuffix(originalName,true);
+            String suffix = FileUtils.getSuffix(originalName, true);
             // 路径
             String filePathName = generatMergeFilePath(md5, suffix);
             // 合并
             this.fileServer.mergeServerFile(filePathName, mergeBucket, chunkFileBOS);
             // 异步入库
             String finalMergeBucket = mergeBucket;
-            this.executorService.submit(()->{
+            this.executorService.submit(() -> {
                 FileRecord record = new FileRecord();
                 record.setBucket(finalMergeBucket);
                 record.setId(md5);
@@ -129,10 +139,10 @@ public class BigFileUploadServiceImpl implements BigFileUploadService {
                 } catch (FileServerException e) {
                     log.error("删除分块文件失败", e);
                 }
-                log.debug("删除{}残留成功",md5);
+                log.debug("删除{}残留成功", md5);
             });
         } catch (FileServerException e) {
-            throw new RuntimeException("文件合并失败",e);
+            throw new RuntimeException("文件合并失败", e);
         }
     }
 

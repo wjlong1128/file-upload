@@ -2,6 +2,7 @@ package com.github.wjlong1128.fileupload.server;
 
 import cn.hutool.core.io.FileUtil;
 import com.github.wjlong1128.fileupload.domain.exception.FileServerException;
+import com.github.wjlong1128.fileupload.utils.MimeTypeUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.util.StringUtils;
 
@@ -68,12 +69,19 @@ public abstract class AbstractFileServer implements FileServer {
         if (StringUtils.hasText(bucket)) {
             return bucket;
         }
+        // 获取mimetype
+        String mimeType = MimeTypeUtils.getMimeWithSuffix("." + suffix);
+        bucket = this.buckets.get(mimeType);
+        if (StringUtils.hasText(bucket)) {
+            return bucket;
+        }
         bucket = this.fileServerProperties.getUnknownBucket();
         if (!StringUtils.hasText(bucket)) {
             throw new FileServerException("未能找到与" + key + "对应的bucket");
         }
         return bucket;
     }
+
 
     public abstract void ifNotExistsCreateBucket(String bucketName) throws FileServerException;
 }
