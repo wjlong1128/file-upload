@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>test</title>
+  </head>
+  <body>
+    <form action="">
+      <input type="file" name="" id="file-input" />
+    </form>
+    <button>btn</button>
+    <script src="./request-fetch.js"></script>
+    <script>
+      let r = request.get("http://localhost:8080/time-get", {
+        name: "zhangsan",
+      });
+      r.then((res) => {
+        console.log(res);
+      });
+    </script>
+  </body>
+</html>
