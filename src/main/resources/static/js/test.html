@@ -12,12 +12,16 @@
     <button>btn</button>
     <script src="./request-fetch.js"></script>
     <script>
-      let r = request.get("http://localhost:8080/time-get", {
-        name: "zhangsan",
-      });
-      r.then((res) => {
-        console.log(res);
-      });
+      const input = document.querySelector('#file-input')
+      input.addEventListener('change',e=>{
+        const file = e.target.files[0];
+        console.log(file)
+        let data = new FormData();
+        data.append('file',file);
+        request.post('http://localhost:8080/upload',data).then(res=>{
+          console.log('上传成功',res)
+        });
+      })
     </script>
   </body>
 </html>

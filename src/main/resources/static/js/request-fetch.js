@@ -3,8 +3,7 @@ const POST = 'POST';
 const DELETE = 'DELETE';
 const PUT = 'PUT'
 
-
-function getUrlConvert(url, data = {}) {
+function getUrlConvert(url, data) {
     url += '?';
     for (let key in data) {
         let value = data[key];
@@ -40,9 +39,11 @@ function request(options) {
                 fetch_options.body = null
             } else if (this.method === POST || this.method === PUT) {
                 let data_type = Object.prototype.toString.call(this.data);
-                if (data_type === '[object File]' || data_type === '[object Blob]') {
+                if (data_type === '[object FormData]') {
                     // 判断为文件类型
-                    this.headers['Content-Type'] = null;
+                    // fetch自动判断文件类型 删除该content-type属性
+                    delete this.headers['Content-Type']
+                    fetch_options.body = this.data;
                 } else {
                     fetch_options.body = JSON.stringify(request_data);
                 }
@@ -72,6 +73,10 @@ request.get = function (url, data, headers, timeout) {
 
 request.post = function (url, data, headers, timeout) {
     return request({method: POST, url, data, headers, timeout})
+}
+
+request.create = function () {
+
 }
 
 
