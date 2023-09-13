@@ -8,7 +8,7 @@ package com.github.wjlong1128.fileupload.domain.result;
  */
 public interface UploadMessage {
 
-    public static enum Big implements ResultMessage {
+    enum BigFile implements ResultState {
         UNABLE_GET_BUCKET(20001, "无法判断该文件存放的位置"),
         UNABLE_UPLOAD_FILE(20002, "上传该文件时发生错误"),
         UNABLE_READ_FILE(20003, "读取该文件失败"),
@@ -18,7 +18,7 @@ public interface UploadMessage {
         private int code;
         private String message;
 
-        Big(int code, String message) {
+        BigFile(int code, String message) {
             this.code = code;
             this.message = message;
         }
@@ -33,14 +33,15 @@ public interface UploadMessage {
             return message;
         }
     }
-    public static enum Normal implements ResultMessage {
+
+    enum Normal implements ResultState {
         UNABLE_GET_BUCKET(10001, "无法判断该文件存放的位置"),
         UNABLE_UPLOAD_FILE(10002, "文件上传失败"),
         UNABLE_READ_FILE(10003, "读取该文件失败"),
 
         UNABLE_GET_FILE(10004, "文件下载失败"),
-        FILE_NOT_EXISTS(10005,"该文件不存在" ),
-        FILE_DELETE_FAIL(10006,"文件删除失败" );
+        FILE_NOT_EXISTS(10005, "该文件不存在"),
+        FILE_DELETE_FAIL(10006, "文件删除失败");
         private int code;
         private String message;
 

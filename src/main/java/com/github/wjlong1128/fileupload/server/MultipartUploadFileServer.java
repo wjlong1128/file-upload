@@ -11,7 +11,7 @@ import java.util.List;
  * @date 2023/8/26
  * @desc
  */
-public interface ShardUploadFileServer extends FileServer {
+public interface MultipartUploadFileServer extends FileServer {
 
     void mergeServerFile(String objectName, String objectBucket, List<ChunkFileBO> chunkFileBOS) throws FileServerException;
 

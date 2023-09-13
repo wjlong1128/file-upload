@@ -5,7 +5,7 @@ import com.github.wjlong1128.fileupload.domain.bo.ChunkFileBO;
 import com.github.wjlong1128.fileupload.domain.bo.FileBO;
 import com.github.wjlong1128.fileupload.domain.exception.FileServerException;
 import com.github.wjlong1128.fileupload.server.AbstractFileServer;
-import com.github.wjlong1128.fileupload.server.ShardUploadFileServer;
+import com.github.wjlong1128.fileupload.server.MultipartUploadFileServer;
 import io.minio.*;
 import io.minio.errors.ErrorResponseException;
 import io.minio.messages.DeleteError;
@@ -32,7 +32,7 @@ import java.util.stream.Collectors;
  */
 @Slf4j
 @Component
-public class MinIOUploadFileServer extends AbstractFileServer implements ShardUploadFileServer {
+public class MinIOUploadFileServer extends AbstractFileServer implements MultipartUploadFileServer {
 
     public static final String SERVER_TYPE = "MINIO";
 

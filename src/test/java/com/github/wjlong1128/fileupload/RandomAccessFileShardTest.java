@@ -25,6 +25,7 @@ public class RandomAccessFileShardTest {
     // 6MB
     public static final int CHUNK_SIZE = 1024 * 1024 * 6;
 
+
     @Test
     void sliceChunk() throws IOException {
         int sum = FileUtils.shardFile(new File(SOURCE), 6, 1024, "C:\\Users\\wangj\\Desktop\\chunk");

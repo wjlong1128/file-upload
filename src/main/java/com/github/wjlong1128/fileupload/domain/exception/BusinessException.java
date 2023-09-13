@@ -1,6 +1,6 @@
 package com.github.wjlong1128.fileupload.domain.exception;
 
-import com.github.wjlong1128.fileupload.domain.result.ResultMessage;
+import com.github.wjlong1128.fileupload.domain.result.ResultState;
 
 /**
  * @author wjlong1128
@@ -9,18 +9,18 @@ import com.github.wjlong1128.fileupload.domain.result.ResultMessage;
  * @desc 通用业务异常类
  */
 
-public class BusinessException extends RuntimeException implements ResultMessage {
+public class BusinessException extends RuntimeException implements ResultState {
 
     private final int code;
 
     public BusinessException(String message) {
         super(message);
-        this.code = ResultMessage.SYSTEM_ERR_CODE;
+        this.code = ResultState.SYSTEM_ERR_CODE;
     }
 
     public BusinessException(String message, Throwable cause) {
         super(message, cause);
-        this.code = ResultMessage.SYSTEM_ERR_CODE;
+        this.code = ResultState.SYSTEM_ERR_CODE;
     }
 
     public BusinessException(int code, String message) {
@@ -33,14 +33,14 @@ public class BusinessException extends RuntimeException implements ResultMessage
         this.code = code;
     }
 
-    public BusinessException(ResultMessage resultMessage) {
-        super(resultMessage.getMessage());
-        this.code = resultMessage.getCode();
+    public BusinessException(ResultState resultState) {
+        super(resultState.getMessage());
+        this.code = resultState.getCode();
     }
 
-    public BusinessException(ResultMessage resultMessage, Throwable cause) {
-        super(resultMessage.getMessage(), cause);
-        this.code = resultMessage.getCode();
+    public BusinessException(ResultState resultState, Throwable cause) {
+        super(resultState.getMessage(), cause);
+        this.code = resultState.getCode();
     }
 
     @Override

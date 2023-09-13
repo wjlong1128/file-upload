@@ -16,8 +16,8 @@ public class Result<T> {
     private T data;
 
     private Result() {
-        this.code = ResultMessage.SUCCESS_CODE;
-        this.message = ResultMessage.SUCCESS_MESSAGE;
+        this.code = ResultState.SUCCESS_CODE;
+        this.message = ResultState.SUCCESS_MESSAGE;
     }
 
     public Result(T data) {
@@ -46,13 +46,13 @@ public class Result<T> {
     }
 
     public static <T> Result<T> success(String message, T data) {
-        return new Result<T>(ResultMessage.SUCCESS_CODE, message, data);
+        return new Result<T>(ResultState.SUCCESS_CODE, message, data);
     }
     public static <T> Result<T> message(String message) {
-        return new Result<T>(ResultMessage.SUCCESS_CODE, message);
+        return new Result<T>(ResultState.SUCCESS_CODE, message);
     }
     public static <T> Result<T> fail() {
-        return new Result<>(ResultMessage.SYSTEM_ERR_CODE, ResultMessage.SYSTEM_ERR_MESSAGE);
+        return new Result<>(ResultState.SYSTEM_ERR_CODE, ResultState.SYSTEM_ERR_MESSAGE);
     }
 
     public static <T> Result<T> fail(int code, String message) {
@@ -61,11 +61,11 @@ public class Result<T> {
 
 
     public static <T> Result<T> fail(String message) {
-        return new Result<>(ResultMessage.SYSTEM_ERR_CODE, message);
+        return new Result<>(ResultState.SYSTEM_ERR_CODE, message);
     }
 
-    public static <T> Result<T> fail(ResultMessage resultMessage) {
-        return new Result<>(resultMessage.getCode(), resultMessage.getMessage());
+    public static <T> Result<T> fail(ResultState resultState) {
+        return new Result<>(resultState.getCode(), resultState.getMessage());
     }
 
 

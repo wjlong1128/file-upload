@@ -8,11 +8,11 @@ import com.github.wjlong1128.fileupload.domain.exception.BusinessException;
 import com.github.wjlong1128.fileupload.domain.exception.FileServerException;
 import com.github.wjlong1128.fileupload.domain.result.UploadMessage;
 import com.github.wjlong1128.fileupload.domain.vo.FileVO;
-import com.github.wjlong1128.fileupload.server.ShardUploadFileServer;
+import com.github.wjlong1128.fileupload.server.MultipartUploadFileServer;
 import com.github.wjlong1128.fileupload.service.BigFileUploadService;
 import com.github.wjlong1128.fileupload.service.FileRecordService;
 import com.github.wjlong1128.fileupload.task.delay.ChunkCheckDelay;
-import com.github.wjlong1128.fileupload.task.delay.ChunkCheckDelayTaskExcutor;
+import com.github.wjlong1128.fileupload.task.delay.ChunkProcessDelayTaskExecutor;
 import com.github.wjlong1128.fileupload.utils.FileUtils;
 import com.github.wjlong1128.fileupload.utils.MimeTypeUtils;
 import lombok.extern.slf4j.Slf4j;
@@ -42,10 +42,11 @@ public class BigFileUploadServiceImpl implements BigFileUploadService {
     /**
      * bigfile:hex: chunkNo
      */
-    public static final String CACHE_PREFIX = "big-file:";
+    public static final String CACHE_TEMPLATE = "big-file:%s";
+    private static final String CHUNK_TYPE = "application/octet-stream";
 
     @Resource
-    private ShardUploadFileServer fileServer;
+    private MultipartUploadFileServer fileServer;
 
     @Resource
     private FileRecordService fileRecordService;
@@ -57,49 +58,47 @@ public class BigFileUploadServiceImpl implements BigFileUploadService {
     private ExecutorService executorService;
 
     @Resource
-    private ChunkCheckDelayTaskExcutor chunkCheckDelayTaskExcutor;
+    private ChunkProcessDelayTaskExecutor chunkCheckDelayTaskExecutor;
 
     @Override
     public boolean isExistsFile(String hex) {
-        FileRecord record = this.fileRecordService.lambdaQuery()
-                .eq(FileRecord::getId, hex)
-                .one();
-        if (record != null) {
+        Long count = this.fileRecordService.lambdaQuery()
+                .eq(FileRecord::getId, hex).count();
+
+        if (count > 0) {
             return true;
         }
-        // TODO 如果库中不存在，但是服务器中存在，那么就可以提交一个异步任务，进行入库
         return false;
     }
 
     @Override
     public boolean isExistsChunk(String hex, Integer chunkNo) {
-        String key = CACHE_PREFIX + hex;
-        Boolean member = this.stringRedisTemplate.opsForSet().isMember(key, chunkNo.toString());
-        return Boolean.TRUE.equals(member);
+        String key = String.format(CACHE_TEMPLATE, hex);
+        Boolean isMember = this.stringRedisTemplate.opsForSet().isMember(key, chunkNo.toString());
+        return Boolean.TRUE.equals(isMember);
     }
 
     @Override
     public boolean uploadChunk(String hex, Integer chunkNo, MultipartFile file) {
-
-        String type = MediaType.APPLICATION_OCTET_STREAM_VALUE;
-        String bucket = null;
+        String type = CHUNK_TYPE;
+        String bucket;
         try {
             bucket = this.fileServer.getBucket(type);
         } catch (FileServerException e) {
-            throw new BusinessException(UploadMessage.Big.UNABLE_GET_BUCKET, e);
+            throw new BusinessException(UploadMessage.BigFile.UNABLE_GET_BUCKET, e);
         }
         String filePath = generateChunkFilePath(hex, chunkNo);
         try {
             this.fileServer.uploadObject(bucket, filePath, type, file.getBytes());
         } catch (FileServerException e) {
-            throw new BusinessException(UploadMessage.Big.UNABLE_UPLOAD_FILE, e);
+            throw new BusinessException(UploadMessage.BigFile.UNABLE_UPLOAD_FILE, e);
         } catch (IOException e) {
-            throw new BusinessException(UploadMessage.Big.UNABLE_READ_FILE, e);
+            throw new BusinessException(UploadMessage.BigFile.UNABLE_READ_FILE, e);
         }
-        String key = CACHE_PREFIX + hex;
+        String key = String.format(CACHE_TEMPLATE, hex);
         this.stringRedisTemplate.opsForSet().add(key, chunkNo.toString());
         // 提交延迟任务，如果过期就删除
-        this.chunkCheckDelayTaskExcutor.add(new ChunkCheckDelay(new ChunkCheckDTO(key, chunkNo, bucket, filePath), 1, TimeUnit.DAYS));
+        this.chunkCheckDelayTaskExecutor.add(new ChunkCheckDelay(new ChunkCheckDTO(key, chunkNo, bucket, filePath), 1, TimeUnit.DAYS));
         return true;
 
     }
@@ -107,18 +106,18 @@ public class BigFileUploadServiceImpl implements BigFileUploadService {
 
     @Override
     public FileVO mergeChunk(String originalName, String md5, Integer chunkNum) {
-        String key = CACHE_PREFIX + md5;
+        String key = String.format(CACHE_TEMPLATE, md5);
         Long size = this.stringRedisTemplate.opsForSet().size(key);
         if (size == null || size.intValue() != chunkNum) {
-            throw new BusinessException(UploadMessage.Big.CHUNK_NOT_ALL);
+            throw new BusinessException(UploadMessage.BigFile.CHUNK_NOT_ALL);
         }
-        String chunkBucket = null;
-        String mergeBucket = null;
+        String chunkBucket;
+        String mergeBucket;
         try {
             chunkBucket = this.fileServer.getBucket(MediaType.APPLICATION_OCTET_STREAM_VALUE);
             mergeBucket = this.fileServer.getBucket(originalName);
         } catch (FileServerException e) {
-            throw new BusinessException(UploadMessage.Big.UNABLE_GET_BUCKET, e);
+            throw new BusinessException(UploadMessage.BigFile.UNABLE_GET_BUCKET, e);
         }
         String finalChunkBucket = chunkBucket;
         List<ChunkFileBO> chunkFileBOS = Stream.iterate(0, i -> ++i).limit(chunkNum)
@@ -132,7 +131,7 @@ public class BigFileUploadServiceImpl implements BigFileUploadService {
         try {
             this.fileServer.mergeServerFile(filePathName, mergeBucket, chunkFileBOS);
         } catch (FileServerException e) {
-            throw new BusinessException(UploadMessage.Big.CHUNK_MERGE_FAIL, e);
+            throw new BusinessException(UploadMessage.BigFile.CHUNK_MERGE_FAIL, e);
         }
         // 入库
         FileRecord record = new FileRecord();
@@ -147,7 +146,7 @@ public class BigFileUploadServiceImpl implements BigFileUploadService {
         try {
             bytes = this.fileServer.getObject(mergeBucket, filePathName);
         } catch (FileServerException e) {
-            throw new BusinessException(UploadMessage.Big.UNABLE_CHECK_FILE, e);
+            throw new BusinessException(UploadMessage.BigFile.UNABLE_CHECK_FILE, e);
         }
         record.setMimeType(MimeTypeUtils.getMimeWithMagic(bytes));
         record.setSize((bytes.length / 1024 / 1024) + "MB");

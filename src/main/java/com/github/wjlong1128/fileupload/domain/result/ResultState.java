@@ -6,7 +6,7 @@ package com.github.wjlong1128.fileupload.domain.result;
  * @date 2023/8/21
  * @desc
  */
-public interface ResultMessage {
+public interface ResultState {
 
     int SUCCESS_CODE  = 200;
     String SUCCESS_MESSAGE = "success";
@@ -15,4 +15,5 @@ public interface ResultMessage {
 
     int getCode();
     String getMessage();
+
 }

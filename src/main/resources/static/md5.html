@@ -13,6 +13,7 @@
 <script>
     document.querySelector('#file').addEventListener('change', e => {
         const file = e.target.files[0];
+        console.log(file.getAsDataURL())
         const fileReader = new FileReader()
         fileReader.readAsBinaryString(file);
         fileReader.onload = e => {
